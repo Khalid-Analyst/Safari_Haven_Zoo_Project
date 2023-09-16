@@ -1,0 +1,103 @@
+-- Find the top 2 staff members with the highest salaries and their roles
+SELECT TOP 2 FirstName, LastName, Role, Salary
+FROM [dbo].[Staff] 
+order by salary desc
+
+
+
+--How many maintenance services have been performed on each exhibit?
+
+select e.[Name] as Exhibit_Name, Count(*) as Maintance_count
+from [dbo].[Maintenance] m
+join [dbo].[Exhibit] e ON m.ExhibitID = e.ExhibitID
+group by e.[Name]
+order by Maintance_count desc
+
+
+
+-- Retrieve the Most Common Animal Species in Each Exhibit
+WITH CommonSpecies AS (
+    SELECT e.[Name] as Exhibit_Name  ,  a.[Name] as Animal_Name, a.Species as Species, COUNT(*) AS Count,
+           ROW_NUMBER() OVER (PARTITION BY e.[Name] ORDER BY COUNT(*) DESC) AS RowNum
+    FROM Animals a
+    JOIN Exhibit e ON a.ExhibitID = e.ExhibitID
+    GROUP BY e.[Name], a.Species, a.[Name]
+)
+
+SELECT Exhibit_Name, Animal_Name, Species, Count
+FROM CommonSpecies
+WHERE RowNum = 1;
+
+
+
+
+
+--- Total Animals Cared for by Each Vet
+
+WITH Vet_Care AS (
+    SELECT
+        s.[FirstName] + ' ' + s.[LastName] AS Staff_Name,
+        COUNT(*) AS Animal_Count
+    FROM [dbo].[VeterinaryCare] v
+    JOIN [dbo].[Staff] s ON v.[StaffID] = s.[StaffID]
+    GROUP BY s.[FirstName] + ' ' + s.[LastName]
+)
+
+SELECT
+    vc.Staff_Name,
+    vc.Animal_Count
+FROM Vet_Care vc;
+
+-- Get the event(s) with the highest number of guests and the total donation for that event
+WITH EventGuests AS (
+    SELECT
+        ze.EventID,
+        ze.[Location],
+        ze.Number_Of_Guests
+    FROM [dbo].[Zoo_Events] ze
+    WHERE ze.Number_Of_Guests = (SELECT MAX(Number_Of_Guests) FROM [dbo].[Zoo_Events])
+)
+
+SELECT
+    d.FirstName + ' ' + d.LastName AS Donor_Name,
+    d.Gender AS Gender,
+    d.Amount AS Donation_Amount,
+    eg.[Location] AS Event_Location,
+    eg.Number_Of_Guests AS Event_Guests,
+    SUM(d.Amount) AS Total_Donation
+FROM [dbo].[Donations] d
+JOIN EventGuests eg ON eg.EventID = d.EventID
+GROUP BY d.FirstName, d.LastName, d.Gender, d.Amount, eg.[Location], eg.Number_Of_Guests
+ORDER BY eg.Number_Of_Guests DESC;
+
+
+--
+-- "Zoo Donations by Location and Event Analysis
+
+WITH EventDonations AS (
+    SELECT
+        ze.EventID,
+        SUM(d.Amount) AS TotalDonation
+    FROM [dbo].[Donations] d
+    JOIN [dbo].[Zoo_Events] ze ON d.EventID = ze.EventID
+    GROUP BY ze.EventID
+)
+
+SELECT
+    ze.Event_Date,
+    ze.[Location],
+    ze.Number_Of_Guests,
+    ed.TotalDonation AS Total_Donations
+FROM (
+    SELECT
+        t.EventID,
+        MAX(d.FirstName + ' ' + d.LastName) AS TopDonor
+    FROM Tickets t
+    JOIN Donations d ON d.EventID = t.EventID
+    GROUP BY t.EventID
+) AS TicketDonors
+JOIN [dbo].[Zoo_Events] ze ON ze.EventID = TicketDonors.EventID
+JOIN EventDonations ed ON ed.EventID = TicketDonors.EventID
+ORDER BY Total_Donations DESC;
+
+
