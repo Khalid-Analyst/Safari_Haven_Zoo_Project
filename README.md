@@ -9,4 +9,3 @@ DBDiagram.com for designing your database
 Mockaro.com for creating realistic mock data based on the database
 SSIS for creating a data flow to move the mock data into staging tables
 SQL Server for creating your working database from the DBDiagram.com design, migrating data from the staging database to the working database, and creating SQL reports
-Tableau for creating data visualizations based on the SQL reports
